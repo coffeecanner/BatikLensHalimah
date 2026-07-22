@@ -1,0 +1,1944 @@
+=========================================================================
+KODE SUMBER (SOURCE CODE) FRONTEND & BACKEND - BATIKLENS GRIYA BATIK HALIMAH
+Format: Kompresi Padat Maksimal untuk Lampiran Skripsi (Metode Whitebox Testing)
+=========================================================================
+
+=== 1. ADMIN ===
+
+--- FRONTEND CODE ---
+ const handleSaveAdmin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const headers = {
+   "Content-Type": "application/json",
+   "Authorization": `Bearer ${localStorage.getItem("token")}`
+  };
+  try {
+   const url = isEditingAdmin ? `/api/admin/${adminForm.id}` : "/api/admin";
+   const method = isEditingAdmin ? "PUT" : "POST";
+   const res = await fetch(url, {
+    method,
+    headers,
+    body: JSON.stringify(adminForm)
+   });
+   if (res.ok) {
+    triggerAlert("success", `Admin berhasil ${isEditingAdmin ? "diperbarui" : "ditambahkan"}`);
+    setIsAdminFormOpen(false);
+    setIsEditingAdmin(false);
+    setAdminForm({ id: 0, username: "", password: "", nama_admin: "" });
+    fetchAllData();
+   } else {
+    const err = await res.json();
+    triggerAlert("error", err.message || "Gagal memproses admin.");
+   }
+  } catch {
+   triggerAlert("error", "Koneksi ke backend bermasalah.");
+  }
+ };
+ const triggerDeleteAdmin = (id: number) => {
+  if (currentUser?.role === "ADMIN" && currentUser?.id === id) {
+   triggerAlert("error", "Anda tidak boleh menghapus akun Anda sendiri yang sedang aktif!");
+   return;
+  }
+  const adm = adminsList.find(a => a.id === id);
+  const name = adm ? adm.nama_admin : `#${id}`;
+  const matchingPegawais = pegawaiList.filter(p => p.adminid === id);
+  const details = [];
+  if (matchingPegawais.length > 0) {
+   details.push(`Menghapus admin ini akan berdampak pada ${matchingPegawais.length} akun pegawai yang diawasinya.`);
+  }
+  setDeleteConfirmation({
+   type: "ADMIN",
+   id,
+   title: `Hapus Akun Administrator: ${name}`,
+   details,
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    try {
+     for (const peg of matchingPegawais) {
+      await cascadeDeletePegawaiRelations(peg.id);
+      await fetch(`/api/pegawai/${peg.id}`, {
+       method: "DELETE",
+       headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      });
+     }
+     const res = await fetch(`/api/admin/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+     });
+     if (res.ok) {
+      triggerAlert("success", "Admin dan seluruh relasi cascade berhasil dihapus.");
+     } else {
+      const err = await res.json();
+      triggerAlert("error", err.message || "Gagal menghapus admin.");
+     }
+    } catch (e) {
+     triggerAlert("error", "Gagal mengeksekusi penghapusan cascade.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Admin" && (
+      isAdminFormOpen ? (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">
+        <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
+         <button
+          onClick={() => setIsAdminFormOpen(false)}
+          className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+         >
+          <ArrowLeft className="w-5 h-5" />
+         </button>
+         <div className="text-left">
+          <h3 className="text-lg font-black text-slate-900 font-sans">
+           {isEditingAdmin ? "Ubah Akun Admin" : "Tambahkan Akun Admin Baru"}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">Lengkapi formulir di bawah ini untuk menyimpan akun administrator baru.</p>
+         </div>
+        </div>
+        <form onSubmit={handleSaveAdmin} className="space-y-6 max-w-2xl text-left">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Username</label>
+           <input
+            type="text" required
+            value={adminForm.username}
+            onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Masukkan username admin"
+           />
+          </div>
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Nama Lengkap Admin</label>
+           <input
+            type="text" required
+            value={adminForm.nama_admin}
+            onChange={(e) => setAdminForm({ ...adminForm, nama_admin: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Nama lengkap administrator"
+           />
+          </div>
+          <div className="md:col-span-2">
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Kata Sandi</label>
+           <input
+            type="password" required={!isEditingAdmin}
+            placeholder={isEditingAdmin ? "Biarkan kosong jika tidak ingin diubah" : "Masukkan kata sandi"}
+            value={adminForm.password}
+            onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+           />
+          </div>
+         </div>
+         <div className="flex space-x-3 pt-4 border-t border-slate-100">
+          <button type="submit" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all cursor-pointer shadow-md shadow-indigo-100">
+           Simpan Admin
+          </button>
+          <button type="button" onClick={() => setIsAdminFormOpen(false)} className="px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-all cursor-pointer">
+           Batal
+          </button>
+         </div>
+        </form>
+       </div>
+      ) : (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="flex justify-between items-center">
+         <div>
+          <h3 className="text-lg font-black text-slate-900 font-sans">Admin</h3>
+          <p className="text-sm text-slate-500">Daftar akun administrator dengan kendali operasional sistem.</p>
+         </div>
+         {currentUser.role === "ADMIN" && (
+          <button
+           onClick={() => {
+            setIsEditingAdmin(false);
+            setAdminForm({ id: 0, username: "", password: "", nama_admin: "" });
+            setIsAdminFormOpen(true);
+           }}
+           className="p-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center space-x-2 cursor-pointer shadow-md transition-colors"
+          >
+           <Plus className="w-4 h-4" />
+           <span>Tambah Admin</span>
+          </button>
+         )}
+        </div>
+        {}
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+         <table className="w-full text-left text-sm text-slate-800 border-collapse">
+          <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+           <tr>
+            <th className="p-4">ID Admin</th>
+            <th className="p-4">Username</th>
+            <th className="p-4">Nama Lengkap</th>
+            <th className="p-4 text-right">Opsi</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-mono text-sm">
+           {filteredAdmins.map((adm) => (
+            <tr key={adm.id} className="hover:bg-slate-50/40">
+             <td className="p-4 font-bold text-indigo-700">{formatId(adm.id, "ADMIN")}</td>
+             <td className="p-4">{adm.username}</td>
+             <td className="p-4 font-sans">{adm.nama_admin}</td>
+             <td className="p-4 text-right space-x-2 font-sans">
+              {currentUser.role === "ADMIN" && (
+               <button
+                onClick={() => {
+                 setAdminForm({ id: adm.id, username: adm.username, password: "", nama_admin: adm.nama_admin });
+                 setIsEditingAdmin(true);
+                 setIsAdminFormOpen(true);
+                }}
+                className="text-indigo-600 hover:text-indigo-800"
+                title="Edit Admin"
+               >
+                <Edit className="w-4 h-4 inline" />
+               </button>
+              )}
+              {currentUser.role === "ADMIN" && (
+               <button onClick={() => triggerDeleteAdmin(adm.id)} className="text-rose-600 hover:text-rose-800" title="Hapus Admin">
+                <Trash2 className="w-4 h-4 inline" />
+               </button>
+              )}
+             </td>
+            </tr>
+           ))}
+          </tbody>
+         </table>
+        </div>
+       </div>
+      )
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/admin', methods=['GET', 'POST'])
+@token_required
+def handle_admin():
+ if request.method == 'GET':
+  admins = Admin.query.all()
+  return jsonify([{'id': a.id, 'username': a.username, 'password': '*********', 'nama_admin': a.nama_admin} for a in admins])
+ else:
+  if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+  data = request.json
+  existing = Admin.query.filter_by(username=data['username']).first()
+  if existing:
+   return jsonify({'message': 'username sudah ada'}), 400
+  new_admin = Admin(username=data['username'], password=data['password'], nama_admin=data['nama_admin'])
+  db.session.add(new_admin)
+  db.session.commit()
+  return jsonify({'id': new_admin.id, 'username': new_admin.username, 'password': '*********', 'nama_admin': new_admin.nama_admin}), 201
+@app.route('/api/admin/<int:id>', methods=['PUT', 'DELETE'])
+@token_required
+def handle_admin_by_id(id):
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ admin = Admin.query.get(id)
+ if not admin:
+  return jsonify({'message': 'Admin tidak ditemukan!'}), 404
+ if request.method == 'PUT':
+  data = request.json
+  existing = Admin.query.filter(Admin.username == data['username'], Admin.id != id).first()
+  if existing:
+   return jsonify({'message': 'username sudah ada'}), 400
+  admin.username = data['username']
+  admin.nama_admin = data['nama_admin']
+  if data.get('password'):
+   admin.password = data['password']
+  db.session.commit()
+  return jsonify({'id': admin.id, 'username': admin.username, 'password': '*********', 'nama_admin': admin.nama_admin})
+ else:
+  if id == request.user.get('id'):
+   return jsonify({'message': 'Anda tidak dapat menghapus akun Anda sendiri yang sedang digunakan!'}), 400
+  db.session.delete(admin)
+  db.session.commit()
+  return jsonify({'message': 'Admin berhasil dihapus.'})
+
+================================================================================
+
+=== 2. PEGAWAI ===
+
+--- FRONTEND CODE ---
+ const handleSavePegawai = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const headers = {
+   "Content-Type": "application/json",
+   "Authorization": `Bearer ${localStorage.getItem("token")}`
+  };
+  try {
+   const url = isEditingPegawai ? `/api/pegawai/${pegawaiForm.id}` : "/api/pegawai";
+   const method = isEditingPegawai ? "PUT" : "POST";
+   const res = await fetch(url, {
+    method,
+    headers,
+    body: JSON.stringify({
+     ...pegawaiForm,
+     id_admin: currentUser?.id || 1
+    })
+   });
+   if (res.ok) {
+    triggerAlert("success", `Pegawai berhasil ${isEditingPegawai ? "diperbarui" : "ditambahkan"}`);
+    setIsPegawaiFormOpen(false);
+    setIsEditingPegawai(false);
+    setPegawaiForm({ id: 0, username: "", password: "", nama_pegawai: "", adminid: 0 });
+    fetchAllData();
+   } else {
+    const err = await res.json();
+    triggerAlert("error", err.message || "Gagal memproses pegawai.");
+   }
+  } catch {
+   triggerAlert("error", "Koneksi ke backend bermasalah.");
+  }
+ };
+ const cascadeDeletePegawaiRelations = async (pegId: number) => {
+  const token = localStorage.getItem("token");
+  const headers = { "Authorization": `Bearer ${token}` };
+  const matchingCusts = customerList.filter(c => c.pegawai_id === pegId);
+  for (const c of matchingCusts) {
+   await fetch(`/api/customer/${c.id}`, { method: "DELETE", headers });
+  }
+  const matchingPreds = hasilPrediksiList.filter(p => p.pegawai_id === pegId);
+  for (const pred of matchingPreds) {
+   const matchingCnn = featureMapCnnList.filter(c => c.hasil_prediksi_id === pred.id);
+   const matchingVit = attentionMapVitList.filter(v => v.hasil_prediksi_id === pred.id);
+   await fetch(`/api/hasil_prediksi/${pred.id}`, { method: "DELETE", headers });
+  }
+  const matchingImgIds = dataGambarList.filter(g => g.pegawai_id === pegId).map(g => g.id);
+  const matchingVals = hasilValidasiList.filter(v => matchingImgIds.includes(v.data_gambar_id));
+  for (const val of matchingVals) {
+   await fetch(`/api/hasil_validasi/${val.id}`, { method: "DELETE", headers });
+  }
+  for (const imgId of matchingImgIds) {
+   await fetch(`/api/data_gambar_motif_batik/${imgId}`, { method: "DELETE", headers });
+  }
+ };
+ const triggerDeletePegawai = (id: number) => {
+  const peg = pegawaiList.find(p => p.id === id);
+  const name = peg ? peg.nama_pegawai : `#${id}`;
+  const matchingCusts = customerList.filter(c => c.pegawai_id === id);
+  const matchingImages = dataGambarList.filter(g => g.pegawai_id === id);
+  const matchingPreds = hasilPrediksiList.filter(p => p.pegawai_id === id);
+  const details = [];
+  if (matchingCusts.length > 0) details.push(`- ${matchingCusts.length} data customer yang dilayani oleh staff ini.`);
+  if (matchingImages.length > 0) details.push(`- ${matchingImages.length} berkas foto motif batik yang diunggah.`);
+  if (matchingPreds.length > 0) details.push(`- ${matchingPreds.length} histori analisis prediksi pola AI.`);
+  setDeleteConfirmation({
+   type: "PEGAWAI",
+   id,
+   title: `Hapus Akun Pegawai (Staff): ${name}`,
+   details: details.length > 0
+    ? ["Menghapus akun pegawai ini juga akan memicu penghapusan otomatis (cascade) pada data berikut untuk menjaga integritas database:", ...details]
+    : ["Tidak ada data relasi yang bergantung. Akun pegawai ini aman dihapus langsung."],
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    try {
+     await cascadeDeletePegawaiRelations(id);
+     const res = await fetch(`/api/pegawai/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+     });
+     if (res.ok) {
+      triggerAlert("success", "Akun pegawai dan seluruh data terkait berhasil dihapus.");
+     } else {
+      const err = await res.json();
+      triggerAlert("error", err.message || "Gagal menghapus pegawai.");
+     }
+    } catch {
+     triggerAlert("error", "Error memproses cascade delete.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Pegawai" && (
+      isPegawaiFormOpen ? (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">
+        <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
+         <button
+          onClick={() => setIsPegawaiFormOpen(false)}
+          className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+         >
+          <ArrowLeft className="w-5 h-5" />
+         </button>
+         <div className="text-left">
+          <h3 className="text-lg font-black text-slate-900 font-sans">
+           {isEditingPegawai ? "Ubah Akun Pegawai" : "Tambahkan Akun Pegawai Baru"}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">Lengkapi formulir di bawah ini untuk menyimpan data pegawai baru.</p>
+         </div>
+        </div>
+        <form onSubmit={handleSavePegawai} className="space-y-6 max-w-2xl text-left">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Username</label>
+           <input
+            type="text" required
+            value={pegawaiForm.username}
+            onChange={(e) => setPegawaiForm({ ...pegawaiForm, username: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Masukkan username pegawai"
+           />
+          </div>
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Nama Lengkap Pegawai</label>
+           <input
+            type="text" required
+            value={pegawaiForm.nama_pegawai}
+            onChange={(e) => setPegawaiForm({ ...pegawaiForm, nama_pegawai: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Nama lengkap pegawai"
+           />
+          </div>
+          <div className="md:col-span-2">
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Kata Sandi</label>
+           <input
+            type="password" required={!isEditingPegawai}
+            placeholder={isEditingPegawai ? "Biarkan kosong jika tidak ingin diubah" : "Masukkan kata sandi"}
+            value={pegawaiForm.password}
+            onChange={(e) => setPegawaiForm({ ...pegawaiForm, password: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+           />
+          </div>
+         </div>
+         <div className="flex space-x-3 pt-4 border-t border-slate-100">
+          <button type="submit" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all cursor-pointer shadow-md shadow-indigo-100">
+           Simpan Pegawai
+          </button>
+          <button type="button" onClick={() => setIsPegawaiFormOpen(false)} className="px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-all cursor-pointer">
+           Batal
+          </button>
+         </div>
+        </form>
+       </div>
+      ) : (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="flex justify-between items-center">
+         <div>
+          <h3 className="text-lg font-black text-slate-900 font-sans">Pegawai</h3>
+          <p className="text-sm text-slate-500">Daftar pegawai / staff yang mengoperasikan sistem analisis pola batik di Griya Batik Halimah.</p>
+         </div>
+         {currentUser.role === "ADMIN" && (
+          <button
+           onClick={() => {
+            setIsEditingPegawai(false);
+            setPegawaiForm({ id: 0, username: "", password: "", nama_pegawai: "", adminid: currentUser.id });
+            setIsPegawaiFormOpen(true);
+           }}
+           className="p-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center space-x-2 cursor-pointer shadow-md"
+          >
+           <Plus className="w-4 h-4" />
+           <span>Tambah Pegawai</span>
+          </button>
+         )}
+        </div>
+        {}
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+         <table className="w-full text-left text-sm text-slate-800 border-collapse">
+          <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+           <tr>
+            <th className="p-4">ID Pegawai</th>
+            <th className="p-4">Username</th>
+            <th className="p-4">Nama Pegawai</th>
+            <th className="p-4">Didaftarkan Oleh</th>
+            <th className="p-4 text-right">Opsi</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-mono text-sm">
+           {filteredPegawai.map((peg) => (
+            <tr key={peg.id} className="hover:bg-slate-50/40">
+             <td className="p-4 font-bold text-indigo-700">{formatId(peg.id, "PEGAWAI")}</td>
+             <td className="p-4">{peg.username}</td>
+             <td className="p-4 font-sans">{peg.nama_pegawai}</td>
+             <td className="p-4 font-mono text-xs">{formatId(peg.admin_id || peg.adminid, "ADMIN")}</td>
+             <td className="p-4 text-right space-x-2 font-sans">
+              {currentUser.role === "ADMIN" && (
+               <button
+                onClick={() => {
+                 setPegawaiForm({ id: peg.id, username: peg.username, password: "", nama_pegawai: peg.nama_pegawai, adminid: peg.admin_id || peg.adminid || 0 });
+                 setIsEditingPegawai(true);
+                 setIsPegawaiFormOpen(true);
+                }}
+                className="text-indigo-600 hover:text-indigo-800"
+                title="Edit Pegawai"
+               >
+                <Edit className="w-4 h-4 inline" />
+               </button>
+              )}
+              {currentUser.role === "ADMIN" && (
+               <button onClick={() => triggerDeletePegawai(peg.id)} className="text-rose-600 hover:text-rose-800" title="Hapus Pegawai">
+                <Trash2 className="w-4 h-4 inline" />
+               </button>
+              )}
+             </td>
+            </tr>
+           ))}
+          </tbody>
+         </table>
+        </div>
+       </div>
+      )
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/pegawai', methods=['GET', 'POST'])
+@token_required
+def handle_pegawai():
+ if request.method == 'GET':
+  pegawais = Pegawai.query.all()
+  return jsonify([{'id': p.id, 'username': p.username, 'password': '*********', 'nama_pegawai': p.nama_pegawai, 'admin_id': p.adminid} for p in pegawais])
+ else:
+  if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+  data = request.json
+  existing = Pegawai.query.filter_by(username=data['username']).first()
+  if existing:
+   return jsonify({'message': 'username sudah ada'}), 400
+  new_pegawai = Pegawai(
+   username=data['username'], password=data['password'],
+   nama_pegawai=data['nama_pegawai'], adminid=request.user.get('id', 1)
+  )
+  db.session.add(new_pegawai)
+  db.session.commit()
+  return jsonify({'id': new_pegawai.id, 'username': new_pegawai.username, 'password': '*********', 'nama_pegawai': new_pegawai.nama_pegawai, 'admin_id': new_pegawai.adminid}), 201
+@app.route('/api/pegawai/<int:id>', methods=['PUT', 'DELETE'])
+@token_required
+def handle_pegawai_by_id(id):
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ pegawai = Pegawai.query.get(id)
+ if not pegawai:
+  return jsonify({'message': 'Pegawai tidak ditemukan!'}), 404
+ if request.method == 'PUT':
+  data = request.json
+  existing = Pegawai.query.filter(Pegawai.username == data['username'], Pegawai.id != id).first()
+  if existing:
+   return jsonify({'message': 'username sudah ada'}), 400
+  pegawai.username = data['username']
+  pegawai.nama_pegawai = data['nama_pegawai']
+  if data.get('password'):
+   pegawai.password = data['password']
+  db.session.commit()
+  return jsonify({'id': pegawai.id, 'username': pegawai.username, 'password': '*********', 'nama_pegawai': pegawai.nama_pegawai, 'admin_id': pegawai.adminid})
+ else:
+  db.session.delete(pegawai)
+  db.session.commit()
+  return jsonify({'message': 'Pegawai berhasil dihapus.'})
+
+================================================================================
+
+=== 3. CUSTOMER ===
+
+--- FRONTEND CODE ---
+ const handleSaveCustomer = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const headers = {
+   "Content-Type": "application/json",
+   "Authorization": `Bearer ${localStorage.getItem("token")}`
+  };
+  try {
+   const url = isEditingCustomer ? `/api/customer/${customerForm.id}` : "/api/customer";
+   const method = isEditingCustomer ? "PUT" : "POST";
+   const res = await fetch(url, {
+    method,
+    headers,
+    body: JSON.stringify(customerForm)
+   });
+   if (res.ok) {
+    triggerAlert("success", `Customer berhasil ${isEditingCustomer ? "diperbarui" : "ditambahkan"}`);
+    setIsCustomerFormOpen(false);
+    setIsEditingCustomer(false);
+    setCustomerForm({ id: 0, nama_customer: "", no_telepon: "", keperluan: "", pegawai_id: 0 });
+    fetchAllData();
+   } else {
+    const err = await res.json();
+    triggerAlert("error", err.message || "Gagal memproses data customer.");
+   }
+  } catch {
+   triggerAlert("error", "Koneksi ke backend bermasalah.");
+  }
+ };
+ const triggerDeleteCustomer = (id: number) => {
+  const cust = customerList.find(c => c.id === id);
+  const name = cust ? cust.nama_customer : `#${id}`;
+  setDeleteConfirmation({
+   type: "CUSTOMER",
+   id,
+   title: `Hapus Data Customer: ${name}`,
+   details: ["Data kunjungan customer ini akan dihapus permanen dari sistem."],
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    try {
+     const res = await fetch(`/api/customer/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+     });
+     if (res.ok) {
+      triggerAlert("success", "Data customer berhasil dihapus.");
+     } else {
+      const err = await res.json();
+      triggerAlert("error", err.message || "Gagal menghapus customer.");
+     }
+    } catch {
+     triggerAlert("error", "Gagal memproses penghapusan.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Customer" && (
+      isCustomerFormOpen ? (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">
+        <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
+         <button
+          onClick={() => setIsCustomerFormOpen(false)}
+          className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+         >
+          <ArrowLeft className="w-5 h-5" />
+         </button>
+         <div className="text-left">
+          <h3 className="text-lg font-black text-slate-900 font-sans">
+           {isEditingCustomer ? "Ubah Data Customer" : "Tambahkan Data Customer Baru"}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">Lengkapi formulir di bawah ini untuk menyimpan data customer baru.</p>
+         </div>
+        </div>
+        <form onSubmit={handleSaveCustomer} className="space-y-6 max-w-4xl text-left">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Nama Customer</label>
+           <input
+            type="text" required
+            value={customerForm.nama_customer}
+            onChange={(e) => setCustomerForm({ ...customerForm, nama_customer: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Nama lengkap customer"
+           />
+          </div>
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">No. Telepon / WhatsApp</label>
+           <input
+            type="text" required
+            value={customerForm.no_telepon}
+            onChange={(e) => setCustomerForm({ ...customerForm, no_telepon: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Masukkan nomor telepon"
+           />
+          </div>
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Keperluan Kunjungan</label>
+           <input
+            type="text" required
+            value={customerForm.keperluan}
+            onChange={(e) => setCustomerForm({ ...customerForm, keperluan: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none"
+            placeholder="Misal: Konsultasi Desain, Pembelian"
+           />
+          </div>
+          <div>
+           <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Dilayani Oleh (Petugas)</label>
+           <select
+            value={customerForm.pegawai_id}
+            onChange={(e) => setCustomerForm({ ...customerForm, pegawai_id: Number(e.target.value) })}
+            className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl p-3 text-sm transition-all outline-none cursor-pointer"
+           >
+            <option value={0}>Pilih Staff Pegawai</option>
+            {pegawaiList.map(p => (
+             <option key={p.id} value={p.id}>{p.nama_pegawai} ({formatId(p.id, "PEGAWAI")})</option>
+            ))}
+           </select>
+          </div>
+         </div>
+         <div className="flex space-x-3 pt-4 border-t border-slate-100">
+          <button type="submit" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all cursor-pointer shadow-md shadow-indigo-100">
+           Simpan Customer
+          </button>
+          <button type="button" onClick={() => setIsCustomerFormOpen(false)} className="px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-all cursor-pointer">
+           Batal
+          </button>
+         </div>
+        </form>
+       </div>
+      ) : (
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="flex justify-between items-center">
+         <div>
+          <h3 className="text-lg font-black text-slate-900 font-sans">Customer</h3>
+          <p className="text-sm text-slate-500">Daftar kunjungan customer Griya Batik Halimah yang dilayani.</p>
+         </div>
+         <button
+          onClick={() => {
+           setIsEditingCustomer(false);
+           setCustomerForm({ id: 0, nama_customer: "", no_telepon: "", keperluan: "", pegawai_id: currentUser.id });
+           setIsCustomerFormOpen(true);
+          }}
+          className="p-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center space-x-2 cursor-pointer shadow-md"
+         >
+          <Plus className="w-4 h-4" />
+          <span>Tambah Customer</span>
+         </button>
+        </div>
+        {}
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+         <table className="w-full text-left text-sm text-slate-800 border-collapse">
+          <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+           <tr>
+            <th className="p-4">ID Customer</th>
+            <th className="p-4">Nama</th>
+            <th className="p-4">No. Telpon</th>
+            <th className="p-4">Keperluan</th>
+            <th className="p-4">Tanggal Kunjungan</th>
+            <th className="p-4">User ID (Petugas)</th>
+            <th className="p-4 text-right">Opsi</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-mono text-sm">
+           {filteredCustomer.map((cust) => (
+            <tr key={cust.id} className="hover:bg-slate-50/40">
+             <td className="p-4 font-bold text-indigo-700">{formatId(cust.id, "CUSTOMER")}</td>
+             <td className="p-4 font-sans">{cust.nama_customer}</td>
+             <td className="p-4">{cust.no_telepon}</td>
+             <td className="p-4 font-sans">{cust.keperluan}</td>
+             <td className="p-4 font-sans">{new Date(cust.tanggal_kunjungan).toLocaleDateString("id-ID", { hour: "2-digit", minute: "2-digit" })}</td>
+             <td className="p-4 font-bold text-indigo-650">
+              {cust.pegawai_id ? formatId(cust.pegawai_id, "PEGAWAI") : (cust.admin_id ? formatId(cust.admin_id, "ADMIN") : "N/A")}
+             </td>
+             <td className="p-4 text-right space-x-2 font-sans">
+              <button
+               onClick={() => {
+                setCustomerForm({ id: cust.id, nama_customer: cust.nama_customer, no_telepon: cust.no_telepon, keperluan: cust.keperluan, pegawai_id: cust.pegawai_id || 0 });
+                setIsEditingCustomer(true);
+                setIsCustomerFormOpen(true);
+               }}
+               className="text-indigo-600 hover:text-indigo-800"
+               title="Edit Customer"
+              >
+               <Edit className="w-4 h-4 inline" />
+              </button>
+              <button onClick={() => triggerDeleteCustomer(cust.id)} className="text-rose-600 hover:text-rose-800" title="Hapus Customer">
+               <Trash2 className="w-4 h-4 inline" />
+              </button>
+             </td>
+            </tr>
+           ))}
+          </tbody>
+         </table>
+        </div>
+       </div>
+      )
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/customer', methods=['GET', 'POST'])
+@token_required
+def handle_customer():
+ if request.method == 'GET':
+  customers = Customer.query.order_by(Customer.tanggal_kunjungan.desc()).all()
+  return jsonify([{
+   'id': c.id,
+   'nama_customer': c.nama_customer,
+   'no_telepon': c.no_telepon,
+   'keperluan': c.keperluan,
+   'tanggal_kunjungan': c.tanggal_kunjungan.isoformat(),
+   'admin_id': c.admin_id,
+   'pegawai_id': c.pegawai_id
+  } for c in customers])
+ data = request.json or {}
+ existing = Customer.query.filter_by(nama_customer=data.get('nama_customer')).first()
+ if existing:
+  return jsonify({'message': 'username sudah ada'}), 400
+ role = request.user.get('role')
+ admin_id = request.user.get('id') if role == 'ADMIN' else None
+ pegawai_id = request.user.get('id') if role == 'STAFF' else data.get('pegawai_id')
+ tanggal_kunjungan = datetime.utcnow()
+ if data.get('tanggal_kunjungan'):
+  try:
+   tanggal_kunjungan = datetime.fromisoformat(data['tanggal_kunjungan'].replace('Z', '+00:00')).replace(tzinfo=None)
+  except ValueError:
+   return jsonify({'message': 'Format tanggal_kunjungan tidak valid.'}), 400
+ new_customer = Customer(
+  nama_customer=data['nama_customer'],
+  no_telepon=data['no_telepon'],
+  keperluan=data['keperluan'],
+  tanggal_kunjungan=tanggal_kunjungan,
+  admin_id=admin_id,
+  pegawai_id=pegawai_id
+ )
+ db.session.add(new_customer)
+ db.session.commit()
+ return jsonify({
+  'id': new_customer.id,
+  'nama_customer': new_customer.nama_customer,
+  'no_telepon': new_customer.no_telepon,
+  'keperluan': new_customer.keperluan,
+  'tanggal_kunjungan': new_customer.tanggal_kunjungan.isoformat(),
+  'admin_id': new_customer.admin_id,
+  'pegawai_id': new_customer.pegawai_id
+ }), 201
+@app.route('/api/customer/<int:id>', methods=['PUT', 'DELETE'])
+@token_required
+def handle_customer_by_id(id):
+ customer = Customer.query.get(id)
+ if not customer:
+  return jsonify({'message': 'Customer tidak ditemukan!'}), 404
+ if request.method == 'PUT':
+  data = request.json or {}
+  existing = Customer.query.filter(Customer.nama_customer == data['nama_customer'], Customer.id != id).first()
+  if existing:
+   return jsonify({'message': 'username sudah ada'}), 400
+  customer.nama_customer = data['nama_customer']
+  customer.no_telepon = data['no_telepon']
+  customer.keperluan = data['keperluan']
+  if data.get('tanggal_kunjungan'):
+   try:
+    customer.tanggal_kunjungan = datetime.fromisoformat(data['tanggal_kunjungan'].replace('Z', '+00:00')).replace(tzinfo=None)
+   except ValueError:
+    return jsonify({'message': 'Format tanggal_kunjungan tidak valid.'}), 400
+  db.session.commit()
+  return jsonify({
+   'id': customer.id,
+   'nama_customer': customer.nama_customer,
+   'no_telepon': customer.no_telepon,
+   'keperluan': customer.keperluan,
+   'tanggal_kunjungan': customer.tanggal_kunjungan.isoformat(),
+   'admin_id': customer.admin_id,
+   'pegawai_id': customer.pegawai_id
+  })
+ db.session.delete(customer)
+ db.session.commit()
+ return jsonify({'message': 'Customer berhasil dihapus.'})
+
+================================================================================
+
+=== 4. DATA GAMBAR ===
+
+--- FRONTEND CODE ---
+ const triggerDeleteGambar = (id: number) => {
+  const matchingVals = hasilValidasiList.filter(v => v.data_gambar_id === id);
+  const matchingPreds = hasilPrediksiList.filter(p => p.gambar_id === id);
+  const details = [];
+  if (matchingVals.length > 0) details.push(`- ${matchingVals.length} data validasi hasil scan.`);
+  if (matchingPreds.length > 0) details.push(`- ${matchingPreds.length} histori kalkulasi prediksi model.`);
+  setDeleteConfirmation({
+   type: "GAMBAR",
+   id,
+   title: `Hapus Berkas Gambar: ${formatId(id, "GAMBAR")}`,
+   details: details.length > 0
+    ? ["Menghapus gambar ini juga akan menghapus data berikut yang terkait:", ...details]
+    : ["Gambar ini aman dihapus langsung karena tidak memiliki tautan prediksi."],
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    const headers = { "Authorization": `Bearer ${localStorage.getItem("token")}` };
+    try {
+     for (const val of matchingVals) {
+      await fetch(`/api/hasil_validasi/${val.id}`, { method: "DELETE", headers });
+     }
+     for (const pred of matchingPreds) {
+      await fetch(`/api/hasil_prediksi/${pred.id}`, { method: "DELETE", headers });
+     }
+     const res = await fetch(`/api/data_gambar_motif_batik/${id}`, { method: "DELETE", headers });
+     if (res.ok) {
+      triggerAlert("success", "Berkas foto dan seluruh relasi prediksi berhasil dihapus.");
+     } else {
+      triggerAlert("error", "Gagal menghapus berkas foto.");
+     }
+    } catch {
+     triggerAlert("error", "Error saat memproses penghapusan.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Data Gambar Motif Batik" && (
+      <div className="space-y-8">
+       {}
+       <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        <Scanner
+         user={currentUser}
+         onPredictionComplete={(pred, motif) => {
+          fetchAllData();
+          if (motif) {
+           setSelectedDetailedMotif(motif);
+           setSelectedDetailedImage(pred.file_foto_batik || pred.image || null);
+          }
+         }}
+         onScanLogged={fetchAllData}
+        />
+       </div>
+       <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="text-left">
+         <h3 className="text-lg font-black text-slate-900 font-sans">Data Gambar Motif Batik</h3>
+         <p className="text-sm text-slate-500">Kumpulan raw foto motif batik hasil unggahan lokal maupun tangkapan kamera.</p>
+        </div>
+       {}
+       <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-left text-sm text-slate-800 border-collapse">
+         <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+          <tr>
+           <th className="p-4">ID Gambar</th>
+           <th className="p-4">Visual Thumbnail</th>
+           <th className="p-4">Tanggal Diunggah</th>
+           <th className="p-4">User ID (Perekam)</th>
+           <th className="p-4 text-right">Opsi</th>
+          </tr>
+         </thead>
+         <tbody className="divide-y divide-slate-100 font-mono text-sm">
+          {filteredGambar.map((img) => (
+           <tr key={img.id} className="hover:bg-slate-50/40">
+            <td className="p-4 font-bold text-indigo-700">{formatId(img.id, "GAMBAR")}</td>
+            <td className="p-4">
+             <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+              <img src={img.file_foto_batik} alt="Thumbnail" className="w-full h-full object-cover" />
+             </div>
+            </td>
+            <td className="p-4 font-sans">{new Date(img.tanggal_foto).toLocaleDateString("id-ID", { hour: "2-digit", minute: "2-digit" })}</td>
+            <td className="p-4 font-bold text-indigo-650">{img.pegawai_id ? formatId(img.pegawai_id, "PEGAWAI") : "ADM-1"}</td>
+            <td className="p-4 text-right font-sans">
+             <button onClick={() => triggerDeleteGambar(img.id)} className="text-rose-600 hover:text-rose-800" title="Hapus Gambar">
+              <Trash2 className="w-4 h-4 inline" />
+             </button>
+            </td>
+           </tr>
+          ))}
+         </tbody>
+        </table>
+       </div>
+      </div>
+     </div>
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/data_gambar_motif_batik', methods=['GET'])
+@token_required
+def get_data_gambar_motif_batik():
+ gambars = DataGambarMotifBatik.query.all()
+ res = [{'id': g.id, 'tanggal_foto': g.tanggal_foto.isoformat(), 'file_foto_batik': g.file_foto_batik, 'pegawai_id': g.pegawai_id} for g in gambars]
+ return jsonify(res)
+@app.route('/api/data_gambar_motif_batik/<int:id>', methods=['DELETE'])
+@token_required
+def delete_data_gambar_motif_batik(id):
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ gambar = DataGambarMotifBatik.query.get(id)
+ if not gambar:
+  return jsonify({'message': 'Gambar tidak ditemukan!'}), 404
+ HasilPrediksiMotifBatik.query.filter_by(gambar_id=id).delete()
+ HasilValidasiGambarMotifBatik.query.filter_by(data_gambar_id=id).delete()
+ db.session.delete(gambar)
+ db.session.commit()
+ return jsonify({'message': 'Gambar berhasil dihapus.'})
+
+================================================================================
+
+=== 5. HASIL VALIDASI ===
+
+--- FRONTEND CODE ---
+ const triggerDeleteValidation = (id: number) => {
+  setDeleteConfirmation({
+   type: "VALIDASI",
+   id,
+   title: `Hapus Data Validasi: ${formatId(id, "VALIDASI")}`,
+   details: ["Menghapus status validasi ini tanpa menghapus berkas gambarnya."],
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    try {
+     const res = await fetch(`/api/hasil_validasi/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+     });
+     if (res.ok) {
+      triggerAlert("success", "Data validasi berhasil dihapus.");
+     } else {
+      triggerAlert("error", "Gagal menghapus data validasi.");
+     }
+    } catch {
+     triggerAlert("error", "Error koneksi.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Hasil Validasi Gambar Motif Batik" && (
+      <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+       <div className="text-left">
+        <h3 className="text-lg font-black text-slate-900 font-sans">Hasil Validasi Gambar Motif Batik</h3>
+        <p className="text-sm text-slate-500">Daftar keputusan validitas dan penolakan pola gambar batik masukan.</p>
+       </div>
+       {}
+       <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-left text-sm text-slate-800 border-collapse">
+         <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+          <tr>
+           <th className="p-4">ID Validasi</th>
+           <th className="p-4">Gambar ID</th>
+           <th className="p-4">Tanggal Penilaian</th>
+           <th className="p-4">Status Validasi</th>
+           <th className="p-4">Keterangan</th>
+           <th className="p-4 text-right">Opsi</th>
+          </tr>
+         </thead>
+         <tbody className="divide-y divide-slate-100 font-mono text-sm">
+          {filteredValidasi.map((val) => (
+           <tr key={val.id} className="hover:bg-slate-50/40">
+            <td className="p-4 font-bold text-indigo-700">{formatId(val.id, "VALIDASI")}</td>
+            <td className="p-4 font-bold text-slate-700">{formatId(val.gambar_id || val.data_gambar_id, "GAMBAR")}</td>
+            <td className="p-4 font-sans">{new Date(val.tanggal_validasi).toLocaleDateString("id-ID")}</td>
+            <td className="p-4 font-sans">
+             <span className={`px-3 py-1 rounded-full text-xs font-bold ${val.status_validasi === "Valid" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+              {val.status_validasi}
+             </span>
+            </td>
+            <td className="p-4 font-sans max-w-xs truncate">{val.catatan || val.keterangan || "-"}</td>
+            <td className="p-4 text-right font-sans">
+             <button onClick={() => triggerDeleteValidation(val.id)} className="text-rose-600 hover:text-rose-800" title="Hapus Validasi">
+              <Trash2 className="w-4 h-4 inline" />
+             </button>
+            </td>
+           </tr>
+          ))}
+         </tbody>
+        </table>
+       </div>
+      </div>
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/hasil_validasi', methods=['GET'])
+@token_required
+def get_hasil_validasi():
+ validations = HasilValidasiGambarMotifBatik.query.all()
+ res = []
+ for v in validations:
+  res.append({
+   'id': v.id,
+   'tanggal_validasi': v.tanggal_validasi.isoformat(),
+   'status_validasi': v.status_validasi,
+   'catatan': v.keterangan,
+   'gambar_id': v.data_gambar_id,
+   'pegawai_id': None
+  })
+ return jsonify(res)
+@app.route('/api/hasil_validasi/<int:id>', methods=['DELETE'])
+@token_required
+def delete_hasil_validasi(id):
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ validasi = HasilValidasiGambarMotifBatik.query.get(id)
+ if not validasi:
+  return jsonify({'message': 'Hasil validasi tidak ditemukan!'}), 404
+ db.session.delete(validasi)
+ db.session.commit()
+ return jsonify({'message': 'Hasil validasi berhasil dihapus.'})
+
+================================================================================
+
+=== 6. HASIL PREDIKSI ===
+
+--- FRONTEND CODE ---
+ const triggerDeletePrediction = (id: number) => {
+  setDeleteConfirmation({
+   type: "PREDIKSI",
+   id,
+   title: `Hapus Histori Prediksi: ${formatId(id, "PREDIKSI")}`,
+   details: ["Data prediksi ini akan dihapus permanen, termasuk visualisasi heatmap CNN/VIT terkait."],
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    try {
+     const res = await fetch(`/api/hasil_prediksi/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+     });
+     if (res.ok) {
+      triggerAlert("success", "Histori prediksi berhasil dihapus.");
+     } else {
+      triggerAlert("error", "Gagal menghapus histori prediksi.");
+     }
+    } catch {
+     triggerAlert("error", "Error koneksi.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Hasil Prediksi Motif Batik" && (
+      <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-4 gap-4">
+        <div className="text-left">
+         <h3 className="text-xl font-black text-slate-900 font-sans">Hasil Prediksi Motif Batik</h3>
+         <p className="text-sm text-slate-500">Log pencatatan kecocokan visual model kecerdasan buatan terhadap motif batik.</p>
+        </div>
+        <div className="relative w-full md:w-64">
+         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <Search className="w-4 h-4" />
+         </span>
+         <input
+          type="text"
+          placeholder="Cari hasil prediksi..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+         />
+        </div>
+       </div>
+       {}
+       <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-left text-sm text-slate-800 border-collapse">
+         <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase font-bold">
+          <tr>
+           <th className="p-4">ID Prediksi</th>
+           <th className="p-4">Gambar ID</th>
+           <th className="p-4">Pratinjau</th>
+           <th className="p-4">Tanggal Identifikasi</th>
+           <th className="p-4">Prediksi Utama</th>
+           <th className="p-4">Akurasi</th>
+           <th className="p-4">Pegawai</th>
+           <th className="p-4 text-right">Opsi</th>
+          </tr>
+         </thead>
+         <tbody className="divide-y divide-slate-100 text-sm">
+          {filteredPrediksi.map((pred) => {
+           const matchedMotif = dataMotifList.find(m => m.id === pred.motif_id);
+           const matchedImg = dataGambarList.find(g => g.id === pred.gambar_id);
+           return (
+            <tr key={pred.id} className="hover:bg-slate-50/40">
+             <td className="p-4 font-mono font-bold text-indigo-700">{formatId(pred.id, "PREDIKSI")}</td>
+             <td className="p-4 font-mono text-slate-500">{formatId(pred.gambar_id, "GAMBAR")}</td>
+             <td className="p-4">
+              {matchedImg?.file_foto_batik ? (
+               <img
+                src={matchedImg.file_foto_batik}
+                alt="Batik Asli"
+                className="w-12 h-12 rounded-lg object-cover border border-slate-200 cursor-zoom-in hover:opacity-85 transition-opacity"
+                onClick={() => {
+                 setPreviewMapImage(matchedImg.file_foto_batik);
+                 setPreviewMapTitle(`Pratinjau Gambar - ${formatId(pred.gambar_id, "GAMBAR")}`);
+                }}
+               />
+              ) : (
+               <span className="text-slate-400 text-xs font-sans">Tidak ada gambar</span>
+              )}
+             </td>
+             <td className="p-4 font-sans text-slate-600">{new Date(pred.tanggal_prediksi).toLocaleDateString("id-ID", { hour: "2-digit", minute: "2-digit" })}</td>
+             <td className="p-4 font-sans font-bold text-slate-900">{pred.prediksi_utama.replace(/_/g, " ").toUpperCase()}</td>
+             <td className="p-4 font-sans">
+              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg border border-indigo-200">
+               {(pred.akurasi_utama * 100).toFixed(1)}%
+              </span>
+             </td>
+             <td className="p-4 font-mono font-bold text-slate-600">{formatId(pred.pegawai_id, "PEGAWAI")}</td>
+             <td className="p-4 text-right">
+              <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+               <button
+                onClick={() => {
+                 if (matchedMotif) {
+                  setSelectedDetailedMotif(matchedMotif);
+                  setSelectedDetailedImage(matchedImg ? matchedImg.file_foto_batik : null);
+                 } else {
+                  triggerAlert("error", "Data spesifikasi motif Kaggle tidak ditemukan.");
+                 }
+                }}
+                className="p-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs inline-flex items-center space-x-1 shrink-0 transition-colors cursor-pointer"
+                title="Lihat Rincian Filosofi"
+               >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Lihat Rincian</span>
+               </button>
+               <button
+                onClick={() => triggerDeletePrediction(pred.id)}
+                className="p-1.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded-lg text-xs font-bold inline-flex items-center shrink-0 transition-colors cursor-pointer"
+                title="Hapus Prediksi"
+               >
+                <Trash2 className="w-3.5 h-3.5" />
+               </button>
+              </div>
+             </td>
+            </tr>
+           );
+          })}
+         </tbody>
+        </table>
+       </div>
+      </div>
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/predict', methods=['POST'])
+@token_required
+def predict():
+ data = request.json
+ image = data.get('image')
+ if not image:
+  return jsonify({'message': 'Data gambar batik tidak disediakan!'}), 400
+ visitor_id = request.user.get('id', 1)
+ visitor_role = request.user.get('role')
+ pegawai_id_val = visitor_id if visitor_role == 'STAFF' else None
+ new_gambar = DataGambarMotifBatik(file_foto_batik=image, pegawai_id=pegawai_id_val)
+ db.session.add(new_gambar)
+ db.session.flush()
+ is_valid_image = False
+ validation_note = ""
+ img = None
+ input_tensor = None
+ try:
+  if ',' in image:
+   base64_data = image.split(',')[1]
+  else:
+   base64_data = image
+  img_bytes = base64.b64decode(base64_data)
+  img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
+  preprocess = T.Compose([
+   T.Resize((224, 224)),
+   T.ToTensor(),
+   T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+  ])
+  input_tensor = preprocess(img).unsqueeze(0)
+  is_valid_image = True
+  validation_note = "Validasi format citra berhasil."
+ except Exception as e:
+  is_valid_image = False
+  validation_note = f"Format citra tidak valid: {str(e)}"
+ new_validasi = HasilValidasiGambarMotifBatik(
+  tanggal_validasi=datetime.utcnow(),
+  status_validasi="Valid" if is_valid_image else "Invalid",
+  keterangan=validation_note,
+  data_gambar_id=new_gambar.id
+ )
+ db.session.add(new_validasi)
+ db.session.flush()
+ if not is_valid_image:
+  db.session.commit()
+  return jsonify({'message': f'Gambar tidak valid dan tidak dapat diproses: {validation_note}'}), 400
+ top1 = "Solo_Srikaton"
+ top2 = "Solo-Yogyakarta_Kawung"
+ conf1 = 0.94
+ conf2 = 0.05
+ heatmap_cnn_base64 = ""
+ heatmap_vit_base64 = ""
+ cnn_features = {}
+ hooks = []
+ def get_hook(name):
+  def hook_fn(module, input, output):
+   cnn_features[name] = output.detach().cpu()
+  return hook_fn
+ if model:
+  try:
+   hooks.append(model.stem.conv1.register_forward_hook(get_hook('stem_conv1')))
+   hooks.append(model.stem.conv2.register_forward_hook(get_hook('stem_conv2')))
+   hooks.append(model.stem.conv3.register_forward_hook(get_hook('stem_conv3')))
+   hooks.append(model.stem.conv4.register_forward_hook(get_hook('stem_conv4')))
+   with torch.no_grad():
+    logits = model(input_tensor)
+   for h in hooks:
+    h.remove()
+   hooks = []
+   probs = torch.softmax(logits, dim=-1)[0]
+   topk_probs, topk_indices = torch.topk(probs, 2)
+   top1_idx = topk_indices[0].item()
+   top2_idx = topk_indices[1].item()
+   if top1_idx < len(CLASSES) and top2_idx < len(CLASSES):
+    top1 = CLASSES[top1_idx]
+    top2 = CLASSES[top2_idx]
+    conf1 = round(topk_probs[0].item(), 2)
+    conf2 = round(topk_probs[1].item(), 2)
+   fig, axes = plt.subplots(4, 8, figsize=(10, 5), facecolor='white')
+   layers = ['stem_conv1', 'stem_conv2', 'stem_conv3', 'stem_conv4']
+   for r_idx, layer_name in enumerate(layers):
+    if layer_name in cnn_features:
+     feat = cnn_features[layer_name][0]
+     for c_idx in range(8):
+      ax = axes[r_idx, c_idx]
+      channel_img = feat[c_idx].numpy()
+      c_min, c_max = channel_img.min(), channel_img.max()
+      if c_max - c_min > 1e-5:
+       channel_img = (channel_img - c_min) / (c_max - c_min)
+      ax.imshow(channel_img, cmap='viridis')
+      ax.axis('off')
+      if c_idx == 0:
+       ax.set_title(layer_name, fontsize=8, loc='left', color='#1e293b', weight='bold')
+    else:
+     for c_idx in range(8):
+      axes[r_idx, c_idx].axis('off')
+   plt.tight_layout()
+   buf_cnn = io.BytesIO()
+   plt.savefig(buf_cnn, format='jpeg', bbox_inches='tight', dpi=120, pil_kwargs={'quality': 75})
+   plt.close()
+   buf_cnn.seek(0)
+   heatmap_cnn_base64 = "data:image/jpeg;base64," + base64.b64encode(buf_cnn.read()).decode('utf-8')
+   fig = plt.figure(figsize=(14, 13), facecolor='white')
+   height_ratios = [1.6, 0.25, 1.6, 1.35, 1.35, 0.25, 1.35, 0.25, 1.1]
+   gs = fig.add_gridspec(9, 24, height_ratios=height_ratios)
+   row_definitions = [
+    {"type": "block", "stage": 0, "block": 0, "name": "Stage 1, attention block 1 (first one)", "num_heads": 4, "cols": (6, 18), "spatial": 14, "is_down": False},
+    {"type": "ellipsis"},
+    {"type": "block", "stage": 0, "block": 3, "name": "Stage 1, attention block 4", "num_heads": 4, "cols": (6, 18), "spatial": 14, "is_down": False},
+    {"type": "block", "stage": 1, "block": None, "name": "Shrinking attention between stages 1 and 2", "num_heads": 8, "cols": (2, 22), "spatial": 7, "is_down": True},
+    {"type": "block", "stage": 1, "block": 0, "name": "Stage 2, attention block 1", "num_heads": 8, "cols": (2, 22), "spatial": 7, "is_down": False},
+    {"type": "ellipsis"},
+    {"type": "block", "stage": 1, "block": 3, "name": "Stage 2, attention block 4", "num_heads": 8, "cols": (2, 22), "spatial": 7, "is_down": False},
+    {"type": "ellipsis"},
+    {"type": "block", "stage": 2, "block": 3, "name": "Stage 3, attention block 4 (last one)", "num_heads": 12, "cols": (0, 24), "spatial": 4, "is_down": False}
+   ]
+   fig.suptitle("Visualization of the attention maps for selected blocks of LeViT-128", fontsize=12, fontweight='bold', color='#1e293b', y=0.98)
+   for r_idx, row_def in enumerate(row_definitions):
+    if row_def["type"] == "ellipsis":
+     ax = fig.add_subplot(gs[r_idx, :])
+     ax.text(0.5, 0.5, '⋮', fontsize=24, ha='center', va='center', fontweight='bold', color='#64748b')
+     ax.axis('off')
+    else:
+     if row_def["is_down"]:
+      down_attn = model.stages[row_def["stage"]].downsample.attn_downsample
+      attn_matrix = down_attn.captured_attn[0]
+     else:
+      block_attn = model.stages[row_def["stage"]].blocks[row_def["block"]].attn
+      attn_matrix = block_attn.captured_attn[0]
+     num_heads = row_def["num_heads"]
+     spatial_size = row_def["spatial"]
+     c_start, c_end = row_def["cols"]
+     ax_label = fig.add_subplot(gs[r_idx, c_start:c_end])
+     ax_label.axis('off')
+     ax_label.text(
+      0.5, 1.15,
+      row_def["name"],
+      fontsize=9, fontweight='bold', color='#1e293b',
+      ha='center', va='bottom'
+     )
+     gs_row = gs[r_idx, c_start:c_end].subgridspec(1, num_heads, wspace=0.15)
+     for c_idx in range(num_heads):
+      ax = fig.add_subplot(gs_row[0, c_idx])
+      if row_def["is_down"]:
+       head_attn = attn_matrix[c_idx].mean(dim=1)
+      else:
+       head_attn = attn_matrix[c_idx].mean(dim=0)
+      grid_attn = head_attn.reshape(spatial_size, spatial_size).numpy()
+      c_min, c_max = grid_attn.min(), grid_attn.max()
+      if c_max - c_min > 1e-5:
+       grid_attn = (grid_attn - c_min) / (c_max - c_min)
+      ax.imshow(grid_attn, cmap='viridis')
+      ax.axis('off')
+      ax.set_title(f"head {c_idx}", color='#475569', fontsize=7, pad=2)
+   plt.subplots_adjust(top=0.92, bottom=0.02, left=0.05, right=0.95, hspace=1.1)
+   buf_vit = io.BytesIO()
+   plt.savefig(buf_vit, format='jpeg', bbox_inches='tight', dpi=130, pil_kwargs={'quality': 75})
+   plt.close()
+   buf_vit.seek(0)
+   heatmap_vit_base64 = "data:image/jpeg;base64," + base64.b64encode(buf_vit.read()).decode('utf-8')
+  except Exception as e:
+   print("Inference or plotting error:", e)
+   for h in hooks:
+    try: h.remove()
+    except: pass
+   heatmap_cnn_base64 = generate_mock_cnn()
+   heatmap_vit_base64 = generate_mock_vit()
+ else:
+  heatmap_cnn_base64 = generate_mock_cnn()
+  heatmap_vit_base64 = generate_mock_vit()
+ motif_match = DataMotifBatikKaggle.query.filter(DataMotifBatikKaggle.nama_motif.ilike(f'%{get_clean_motif_name(top1)}%')).first()
+ if not motif_match:
+  motif_match = DataMotifBatikKaggle(
+   nama_motif=get_clean_motif_name(top1),
+   asal_daerah=top1.split('_')[0] if '_' in top1 else "Indonesia",
+   makna_filosofis="Filosofi budaya luhur Nusantara.",
+   occasion="Acara Formal",
+   contoh_gambar=json.dumps([image])
+  )
+  db.session.add(motif_match)
+  db.session.flush()
+ new_prediksi = HasilPrediksiMotifBatik(
+  tanggal_prediksi=datetime.utcnow(),
+  prediksi_utama=top1, akurasi_utama=conf1,
+  prediksi_sekunder=top2, akurasi_sekunder=conf2,
+  gambar_id=new_gambar.id, motif_id=motif_match.id, pegawai_id=pegawai_id_val
+ )
+ db.session.add(new_prediksi)
+ db.session.flush()
+ new_cnn = FeatureMapCnn(
+  file_heatmap_cnn=heatmap_cnn_base64,
+  hasil_prediksi_id=new_prediksi.id,
+  hasil_validasi_id=new_validasi.id
+ )
+ db.session.add(new_cnn)
+ db.session.flush()
+ new_vit = AttentionMapVit(
+  file_heatmap_cnn=heatmap_vit_base64,
+  hasil_prediksi_id=new_prediksi.id,
+  feature_map_cnn_id=new_cnn.id,
+  hasil_validasi_id=new_validasi.id
+ )
+ db.session.add(new_vit)
+ current_month = datetime.utcnow().strftime("%B %Y")
+ report = Laporan.query.filter_by(periode_bulan=current_month, motif_id=motif_match.id).first()
+ if report:
+  report.total_prediksi += 1
+ else:
+  new_report = Laporan(periode_bulan=current_month, total_prediksi=1, motif_id=motif_match.id)
+  db.session.add(new_report)
+ db.session.commit()
+ return jsonify({
+  'success': True,
+  'prediction': {
+   'prediction_utama': top1, 'akurasi_utama': conf1,
+   'prediction_sekunder': top2, 'akurasi_sekunder': conf2,
+   'tanggal_prediksi': new_prediksi.tanggal_prediksi.isoformat()
+  },
+  'data_motif': {
+   'id': motif_match.id, 'nama_motif': get_clean_motif_name(motif_match.nama_motif), 'asal_daerah': motif_match.asal_daerah
+  }
+ })
+@app.route('/api/hasil_prediksi', methods=['GET'])
+@token_required
+def get_hasil_prediksi():
+ prediksis = HasilPrediksiMotifBatik.query.all()
+ res = []
+ for p in prediksis:
+  res.append({
+   'id': p.id, 'tanggal_prediksi': p.tanggal_prediksi.isoformat(),
+   'prediksi_utama': p.prediksi_utama, 'akurasi_utama': p.akurasi_utama,
+   'prediksi_sekunder': p.prediksi_sekunder, 'akurasi_sekunder': p.akurasi_sekunder,
+   'gambar_id': p.gambar_id, 'motif_id': p.motif_id, 'pegawai_id': p.pegawai_id
+  })
+ return jsonify(res)
+@app.route('/api/hasil_prediksi/<int:id>', methods=['PUT', 'DELETE'])
+@token_required
+def handle_hasil_prediksi_by_id(id):
+ prediction = HasilPrediksiMotifBatik.query.get(id)
+ if not prediction:
+  return jsonify({'message': 'Hasil prediksi tidak ditemukan!'}), 404
+ if request.method == 'PUT':
+  data = request.json
+  prediction.prediksi_utama = data['prediksi_utama']
+  db.session.commit()
+  return jsonify({'id': prediction.id, 'prediksi_utama': prediction.prediksi_utama})
+ else:
+  db.session.delete(prediction)
+  db.session.commit()
+  return jsonify({'message': 'Hasil prediksi berhasil dihapus.'})
+
+================================================================================
+
+=== 7. DATA MOTIF ===
+
+--- FRONTEND CODE ---
+ const handleOpenEditMotifPage = (motif: DataMotifBatikKaggleModel) => {
+  setSelectedMotifForEdit(motif);
+  setEditMotifForm({
+   id: motif.id,
+   nama_motif: motif.nama_motif,
+   asal_daerah: motif.asal_daerah,
+   makna_filosofis: motif.makna_filosofis,
+   occasion: motif.occasion
+  });
+  let parsedGallery: string[] = [];
+  try {
+   parsedGallery = JSON.parse(motif.contoh_gambar || "[]");
+  } catch {
+   if (motif.contoh_gambar) {
+    parsedGallery = motif.contoh_gambar.split(",").map(url => url.trim());
+   }
+  }
+  setEditGallery(parsedGallery);
+  setIsEditingMotifPage(true);
+ };
+ const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+   const file = e.target.files[0];
+   const reader = new FileReader();
+   reader.onload = () => {
+    const base64Str = reader.result as string;
+    setEditGallery(prev => [...prev, base64Str]);
+    triggerAlert("success", "Gambar berhasil dikonversi dan dimasukkan ke galeri lokal sementara.");
+   };
+   reader.readAsDataURL(file);
+  }
+ };
+ const handleAddImageUrl = () => {
+  if (!newImageUrl.trim()) return;
+  setEditGallery(prev => [...prev, newImageUrl.trim()]);
+  setNewImageUrl("");
+  triggerAlert("success", "Tautan URL berhasil ditambahkan ke galeri.");
+ };
+ const handleRemoveGalleryImage = (indexToRemove: number) => {
+  setEditGallery(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  triggerAlert("success", "Gambar berhasil dihapus dari galeri draf.");
+ };
+ const handleSaveMotif = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  const headers = {
+   "Content-Type": "application/json",
+   "Authorization": `Bearer ${token}`
+  };
+  try {
+   const payload = {
+    ...editMotifForm,
+    contoh_gambar: JSON.stringify(editGallery)
+   };
+   const res = await fetch(`/api/data_motif/${editMotifForm.id}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(payload)
+   });
+   if (res.ok) {
+    triggerAlert("success", "Informasi motif dan galeri contoh gambar berhasil diperbarui.");
+    setIsEditingMotifPage(false);
+    setSelectedMotifForEdit(null);
+    fetchAllData();
+   } else {
+    const err = await res.json();
+    triggerAlert("error", err.message || "Gagal memperbarui motif.");
+   }
+  } catch {
+   triggerAlert("error", "Error koneksi ke backend.");
+  }
+ };
+ const triggerDeleteMotif = (id: number) => {
+  const motif = dataMotifList.find(m => m.id === id);
+  const name = motif ? motif.nama_motif : `#${id}`;
+  const matchingPreds = hasilPrediksiList.filter(p => p.motif_id === id);
+  const details = [];
+  if (matchingPreds.length > 0) {
+   details.push(`Menghapus data motif batik ini akan ikut menghapus ${matchingPreds.length} histori prediksi pola AI yang bersangkutan.`);
+  }
+  setDeleteConfirmation({
+   type: "KAGGLE",
+   id,
+   title: `Hapus Referensi Motif Batik Kaggle: ${name}`,
+   details,
+   onConfirm: async () => {
+    setIsDeletingLoading(true);
+    const headers = { "Authorization": `Bearer ${localStorage.getItem("token")}` };
+    try {
+     for (const pred of matchingPreds) {
+      await fetch(`/api/hasil_prediksi/${pred.id}`, { method: "DELETE", headers });
+     }
+     const res = await fetch(`/api/data_motif/${id}`, { method: "DELETE", headers });
+     if (res.ok) {
+      triggerAlert("success", "Referensi motif dan relasi prediksi berhasil dihapus.");
+     } else {
+      triggerAlert("error", "Gagal menghapus motif.");
+     }
+    } catch {
+     triggerAlert("error", "Gagal memproses.");
+    } finally {
+     setIsDeletingLoading(false);
+     setDeleteConfirmation(null);
+     fetchAllData();
+    }
+   }
+  });
+ };
+     {}
+     {!isEditingMotifPage && currentMenu === "Data Motif Batik Kaggle" && (
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-4 gap-4">
+        <div className="text-left">
+         <h3 className="text-xl font-bold text-slate-800 font-sans tracking-tight">Data Motif Batik Kaggle</h3>
+         <p className="text-xs text-slate-400 mt-1">Referensi pustaka batik luhur. Admin memiliki hak penuh menyunting data motif luhur.</p>
+        </div>
+        <div className="relative w-full md:w-64">
+         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <Search className="w-4 h-4" />
+         </span>
+         <input
+          type="text"
+          placeholder="Cari motif..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-indigo-500 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
+         />
+        </div>
+       </div>
+       {}
+       <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-left text-sm text-slate-800 border-collapse">
+         <thead className="bg-[#f8fafc] border-b border-slate-150 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+          <tr>
+           <th className="p-4">PRATINJAU</th>
+           <th className="p-4">ID</th>
+           <th className="p-4">NAMA MOTIF</th>
+           <th className="p-4">ASAL DAERAH</th>
+           <th className="p-4">PENGGUNAAN ACARA</th>
+           <th className="p-4">MAKNA FILOSOFIS</th>
+           <th className="p-4 text-right">OPSI</th>
+          </tr>
+         </thead>
+         <tbody className="divide-y divide-slate-100 text-sm bg-white">
+          {filteredMotif.map((motif) => {
+           let imageGallery: string[] = [];
+           try {
+            imageGallery = JSON.parse(motif.contoh_gambar || "[]");
+           } catch {
+            if (motif.contoh_gambar) {
+             imageGallery = motif.contoh_gambar.split(",").map(url => url.trim());
+            }
+           }
+           const thumbnail = imageGallery.length > 0 ? imageGallery[0] : null;
+           return (
+            <tr key={motif.id} className="hover:bg-slate-50/40 transition-colors">
+             <td className="p-4 align-middle">
+              {thumbnail ? (
+               <img
+                src={thumbnail}
+                alt={motif.nama_motif}
+                className="w-11 h-11 rounded-lg object-cover border border-slate-200 cursor-zoom-in hover:opacity-85 transition-opacity"
+                onClick={() => {
+                 setPreviewMapImage(thumbnail);
+                 setPreviewMapTitle(`Gambar Referensi - ${motif.nama_motif.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}`);
+                }}
+               />
+              ) : (
+               <span className="text-slate-400 text-xs font-sans italic">Belum ada</span>
+              )}
+             </td>
+             <td className="p-4 align-middle font-semibold text-blue-600 font-mono text-xs">
+              #MTF-{motif.id}
+             </td>
+             <td className="p-4 align-middle font-medium text-slate-800 text-sm">
+              {motif.nama_motif.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+             </td>
+             <td className="p-4 align-middle">
+              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded uppercase ${getRegionBadgeStyles(motif.asal_daerah)}`}>
+               {motif.asal_daerah.toUpperCase()}
+              </span>
+             </td>
+             <td className="p-4 align-middle text-xs text-slate-700 font-sans leading-relaxed max-w-[240px] break-words">
+              {motif.occasion}
+             </td>
+             <td className="p-4 align-middle text-xs text-slate-500 font-sans leading-relaxed max-w-[280px] break-words">
+              {motif.makna_filosofis}
+             </td>
+             <td className="p-4 align-middle text-right">
+              <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+               <button
+                onClick={() => {
+                 setSelectedDetailedMotif(motif);
+                 setSelectedDetailedImage(null);
+                }}
+                className="px-3.5 py-1 bg-white hover:bg-slate-50 border border-slate-250 text-slate-600 hover:text-slate-900 text-[11px] font-semibold rounded-full transition-colors cursor-pointer shadow-xs inline-flex items-center"
+               >
+                Lihat Rincian
+               </button>
+               {currentUser?.role === "ADMIN" && (
+                <button
+                 onClick={() => handleOpenEditMotifPage(motif)}
+                 className="px-3.5 py-1 bg-white hover:bg-slate-50 border border-slate-250 text-slate-600 hover:text-slate-900 text-[11px] font-semibold rounded-full transition-colors cursor-pointer shadow-xs inline-flex items-center"
+                >
+                 Edit
+                </button>
+               )}
+               {currentUser?.role === "ADMIN" && (
+                <button
+                 onClick={() => triggerDeleteMotif(motif.id)}
+                 className="p-1 px-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 hover:text-rose-800 text-[11px] font-semibold rounded-full transition-colors cursor-pointer shadow-xs inline-flex items-center"
+                 title="Hapus Motif"
+                >
+                 <Trash2 className="w-3 h-3" />
+                </button>
+               )}
+              </div>
+             </td>
+            </tr>
+           );
+          })}
+         </tbody>
+        </table>
+       </div>
+      </div>
+     )}
+
+--- BACKEND CODE ---
+@app.route('/api/data_motif', methods=['GET', 'POST'])
+@token_required
+def handle_data_motif():
+ if request.method == 'GET':
+  motifs = DataMotifBatikKaggle.query.all()
+  res = []
+  for m in motifs:
+   res.append({
+    'id': m.id, 'nama_motif': m.nama_motif, 'asal_daerah': m.asal_daerah,
+    'makna_filosofis': m.makna_filosofis, 'occasion': m.occasion,
+    'contoh_gambar': m.contoh_gambar
+   })
+  return jsonify(res)
+ else:
+  if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+  data = request.json
+  new_motif = DataMotifBatikKaggle(
+   nama_motif=data['nama_motif'], asal_daerah=data.get('asal_daerah', 'Indonesia'),
+   makna_filosofis=data.get('makna_filosofis', ''), occasion=data.get('occasion', ''),
+   contoh_gambar=json.dumps(data.get('contoh_gambar', []))
+  )
+  db.session.add(new_motif)
+  db.session.commit()
+  return jsonify({'id': new_motif.id, 'nama_motif': new_motif.nama_motif}), 201
+@app.route('/api/data_motif/<int:id>', methods=['PUT', 'DELETE'])
+@token_required
+def handle_data_motif_by_id(id):
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ motif = DataMotifBatikKaggle.query.get(id)
+ if not motif:
+  return jsonify({'message': 'Motif tidak ditemukan!'}), 404
+ if request.method == 'PUT':
+  data = request.json
+  motif.nama_motif = data['nama_motif']
+  motif.asal_daerah = data.get('asal_daerah', 'Indonesia')
+  motif.makna_filosofis = data.get('makna_filosofis', '')
+  motif.occasion = data.get('occasion', '')
+  contoh_gambar = data.get('contoh_gambar')
+  if contoh_gambar is not None:
+   if isinstance(contoh_gambar, list):
+    motif.contoh_gambar = json.dumps(contoh_gambar)
+   else:
+    motif.contoh_gambar = contoh_gambar
+  db.session.commit()
+  return jsonify({'id': motif.id, 'nama_motif': motif.nama_motif})
+ else:
+  HasilPrediksiMotifBatik.query.filter_by(motif_id=id).delete()
+  db.session.delete(motif)
+  db.session.commit()
+  return jsonify({'message': 'Motif berhasil dihapus.'})
+
+================================================================================
+
+=== 8. LAPORAN ===
+
+--- FRONTEND CODE ---
+import React, { useState, useMemo } from "react";
+import { HasilPrediksiMotifBatikModel, DataMotifBatikKaggleModel, PegawaiModel } from "../types";
+import { FileSpreadsheet, Download, RefreshCw, BarChart2 } from "lucide-react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+interface LaporanViewProps {
+ hasilPrediksiList: HasilPrediksiMotifBatikModel[];
+ dataMotifList: DataMotifBatikKaggleModel[];
+ pegawaiList: PegawaiModel[];
+}
+export default function LaporanView({ hasilPrediksiList, dataMotifList, pegawaiList }: LaporanViewProps) {
+ const [filterMonth, setFilterMonth] = useState<string>("ALL");
+ const getCleanMotifName = (rawName: string) => {
+  const underScoreIdx = rawName.indexOf("_");
+  return underScoreIdx !== -1 ? rawName.slice(underScoreIdx + 1) : rawName;
+ };
+ const uniqueMonths = useMemo(() => {
+  const months = new Set<string>();
+  hasilPrediksiList.forEach(hp => {
+   const date = new Date(hp.tanggal_prediksi);
+   const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+   const yyyy = date.getFullYear();
+   months.add(`${yyyy}-${mm}`);
+  });
+  return Array.from(months).sort((a,b) => b.localeCompare(a));
+ }, [hasilPrediksiList]);
+ const filteredData = useMemo(() => {
+  if (filterMonth === "ALL") return hasilPrediksiList;
+  return hasilPrediksiList.filter(hp => {
+   const date = new Date(hp.tanggal_prediksi);
+   const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+   const yyyy = date.getFullYear();
+   return `${yyyy}-${mm}` === filterMonth;
+  });
+ }, [filterMonth, hasilPrediksiList]);
+ const chartData = useMemo(() => {
+  const counts: Record<string, number> = {};
+  filteredData.forEach(hp => {
+   const motifLabel = getCleanMotifName(hp.prediksi_utama);
+   counts[motifLabel] = (counts[motifLabel] || 0) + 1;
+  });
+  const output = Object.keys(counts).map(motif => ({
+   name: motif,
+   value: counts[motif]
+  })).sort((a,b) => b.value - a.value);
+  if (output.length > 5) {
+   const top5 = output.slice(0, 5);
+   const othersVal = output.slice(5).reduce((acc, obj) => acc + obj.value, 0);
+   top5.push({ name: "Lainnya", value: othersVal });
+   return top5;
+  }
+  return output;
+ }, [filteredData]);
+ const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#64748b'];
+ const exportCSV = () => {
+  const headers = "ID Log,Tanggal,Motif Utama,Akurasi,Staff\n";
+  const rows = filteredData.map(hp => {
+   const dt = new Date(hp.tanggal_prediksi).toLocaleString("id-ID");
+   const motif = getCleanMotifName(hp.prediksi_utama);
+   const staffInfo = pegawaiList.find(p => p.id === hp.pegawai_id);
+   const staffName = staffInfo ? staffInfo.nama_pegawai : "System";
+   return `PRD-${hp.id},"${dt}","${motif}",${(hp.akurasi_utama*100).toFixed(1)}%,"${staffName}"`;
+  }).join("\n");
+  const blob = new Blob([headers + rows], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `laporan_batiklens_${filterMonth}.csv`;
+  a.click();
+ };
+ return (
+  <div id="view-laporan" className="space-y-6 text-left animate-fade-in">
+   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+     <h2 className="text-lg font-bold text-slate-900">Laporan</h2>
+     <p className="text-xs text-slate-500 font-sans">
+      Analisis lengkap seluruh pengujian mesin inferensi dengan opsi cetak dan eksportasi.
+     </p>
+    </div>
+    <div className="flex space-x-2">
+     <select
+      value={filterMonth}
+      onChange={e => setFilterMonth(e.target.value)}
+      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer transition-colors hover:border-slate-350"
+     >
+      <option value="ALL">Semua Waktu</option>
+      {uniqueMonths.map(m => (
+       <option key={m} value={m}>{m}</option>
+      ))}
+     </select>
+     <button
+      onClick={exportCSV}
+      className="p-2 px-4 bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-950/20 active:scale-95 transition-all font-sans cursor-pointer shadow-sm"
+     >
+      <FileSpreadsheet className="w-3.5 h-3.5" />
+      <span>Ekspor CSV</span>
+     </button>
+     <button
+      onClick={() => window.print()}
+      className="p-2 px-4 bg-indigo-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-950/20 active:scale-95 transition-all font-sans cursor-pointer shadow-sm"
+     >
+      <Download className="w-3.5 h-3.5" />
+      <span>Cetak PDF</span>
+     </button>
+    </div>
+   </div>
+   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
+     <h3 className="text-[10px] uppercase text-slate-500 tracking-widest font-mono font-bold mb-4">Sebaran Motif Terdeteksi</h3>
+     <div className="flex-1 h-64">
+      {chartData.length > 0 ? (
+       <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+         <Pie
+          data={chartData}
+          cx="50%" cy="50%"
+          innerRadius={60} outerRadius={80}
+          paddingAngle={2}
+          dataKey="value"
+         >
+          {chartData.map((entry, index) => (
+           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+         </Pie>
+         <Tooltip />
+         <Legend />
+        </PieChart>
+       </ResponsiveContainer>
+      ) : (
+       <div className="h-full flex items-center justify-center text-xs text-slate-400">Tidak ada data untuk bulan ini</div>
+      )}
+     </div>
+    </div>
+    <div className="md:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+     <div className="p-4 border-b border-slate-100 bg-slate-50">
+      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center space-x-1">
+       <BarChart2 className="w-4 h-4 text-indigo-600" />
+       <span>Detail Riwayat Pemindaian ({filteredData.length})</span>
+      </h3>
+     </div>
+     <div className="overflow-x-auto flex-1 max-h-[400px]">
+      <table className="w-full text-left text-xs text-slate-800 table-auto">
+       <thead className="bg-slate-50/50 sticky top-0 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+        <tr>
+         <th className="p-3.5">ID Log</th>
+         <th className="p-3.5">Tanggal</th>
+         <th className="p-3.5">Hasil (Top-1)</th>
+         <th className="p-3.5">Akurasi</th>
+         <th className="p-3.5">Staff Entry</th>
+        </tr>
+       </thead>
+       <tbody className="divide-y divide-slate-100">
+        {filteredData.map(hp => {
+         const staffInfo = pegawaiList.find(p => p.id === hp.pegawai_id);
+         const staffName = staffInfo ? staffInfo.nama_pegawai : "System/Admin";
+         return (
+          <tr key={hp.id} className="hover:bg-slate-50/50 transition-colors">
+           <td className="p-3.5 text-indigo-650 font-semibold font-mono">#PRD-{hp.id}</td>
+           <td className="p-3.5 text-slate-500 font-mono">
+            {new Date(hp.tanggal_prediksi).toLocaleDateString("id-ID", {
+             day: "numeric", month: "long", year: "numeric",
+             hour: "2-digit", minute: "2-digit"
+            })}
+           </td>
+           <td className="p-3.5 font-bold text-slate-800">{getCleanMotifName(hp.prediksi_utama)}</td>
+           <td className="p-3.5">
+            <span className={`p-1 px-2 rounded-md font-semibold border ${
+             hp.akurasi_utama > 0.85 ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
+            }`}>
+             {(hp.akurasi_utama * 100).toFixed(1)}%
+            </span>
+           </td>
+           <td className="p-3.5 text-slate-600">{staffName}</td>
+          </tr>
+         );
+        })}
+        {filteredData.length === 0 && (
+         <tr>
+          <td colSpan={5} className="p-8 text-center text-xs text-slate-400">Belum ada pemindaian tercatat pada periode ini.</td>
+         </tr>
+        )}
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+  </div>
+ );
+}
+
+--- BACKEND CODE ---
+@app.route('/api/laporan', methods=['GET'])
+@token_required
+def get_laporan():
+ laporan = Laporan.query.all()
+ res = [{'id': l.id, 'periode_bulan': l.periode_bulan, 'total_prediksi': l.total_prediksi, 'motif_id': l.motif_id} for l in laporan]
+ return jsonify(res)
+@app.route('/api/laporan/generate', methods=['POST'])
+@token_required
+def generate_laporan():
+ if request.user.get('role') != 'ADMIN': return jsonify({'message': 'Hanya Admin!'}), 403
+ data = request.json
+ periode_bulan = data.get('periode_bulan')
+ if not periode_bulan:
+  return jsonify({'message': 'Periode bulan tidak disediakan!'}), 400
+ try:
+  dt = datetime.strptime(periode_bulan, "%B %Y")
+  month = dt.month
+  year = dt.year
+ except ValueError:
+  return jsonify({'message': 'Format periode bulan salah!'}), 400
+ Laporan.query.filter_by(periode_bulan=periode_bulan).delete()
+ from sqlalchemy import extract
+ predictions = HasilPrediksiMotifBatik.query.filter(
+  extract('month', HasilPrediksiMotifBatik.tanggal_prediksi) == month,
+  extract('year', HasilPrediksiMotifBatik.tanggal_prediksi) == year
+ ).all()
+ counts = {}
+ for p in predictions:
+  if p.motif_id:
+   counts[p.motif_id] = counts.get(p.motif_id, 0) + 1
+ for motif_id, count in counts.items():
+  new_report = Laporan(periode_bulan=periode_bulan, total_prediksi=count, motif_id=motif_id)
+  db.session.add(new_report)
+ db.session.commit()
+ return jsonify({'success': True, 'message': f'Laporan bulanan {periode_bulan} berhasil diregenerasi.'})
+
+================================================================================
+

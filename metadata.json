@@ -1,0 +1,10 @@
+{
+  "name": "Remix: BatikLens Final Hosting",
+  "description": "Advanced full-stack batik classification and management system featuring a custom PyTorch model-inference engine emulator powered by Gemini AI, role-based access control, visitor logging, and interactive Kaggle batik motif details reference.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
