@@ -1,10 +1,8 @@
 {
-  "version": 2,
-  "framework": "vite",
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://batiklenshalimah.my.id/api/:path*"
+      "destination": "http://202.73.25.122/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
