@@ -7,7 +7,7 @@ import './index.css';
 const originalFetch = window.fetch;
 window.fetch = function (input, init) {
   if (typeof input === 'string' && input.startsWith('/api/')) {
-    const apiUrl = (import.meta as any).env.VITE_API_URL || '';
+    const apiUrl = ((import.meta as any).env.VITE_API_URL || '').replace(/\/$/, '');
     input = `${apiUrl}${input}`;
   }
   return originalFetch(input, init);
