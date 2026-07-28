@@ -1058,9 +1058,7 @@ export default function App() {
                 <span>{bannerAlert.text}</span>
               </div>
             )}
-            <div className="text-xs bg-slate-50 border border-slate-200 py-1 px-3 rounded-lg text-slate-500 font-mono font-bold">
-              REPORT PRINT MODE
-            </div>
+  
           </div>
         </header>
 
