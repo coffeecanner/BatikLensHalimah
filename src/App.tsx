@@ -39,6 +39,7 @@ import Scanner from "./components/Scanner";
 import MotifDetailedView from "./components/MotifDetailedView";
 import LaporanView from "./components/LaporanView";
 import DashboardStats from "./components/DashboardStats";
+import logoBatik from './logo.png'
 
 import { 
   User, 
@@ -836,19 +837,10 @@ export default function App() {
         <div className="w-full max-w-md bg-white border border-slate-200 shadow-2xl rounded-3xl p-8 space-y-6 text-center">
           <div className="w-16 h-16 bg-white border border-slate-200/90 rounded-2xl mx-auto flex items-center justify-center p-1.5 shadow-sm overflow-hidden mb-2">
             <img 
-              src="/src/logo.png" 
+              src={logoBatik} 
               alt="BatikLens Logo" 
               className="w-full h-full object-contain" 
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const pNode = e.currentTarget.parentNode as HTMLElement;
-                if (pNode) {
-                  const fallbackIcon = document.createElement('span');
-                  fallbackIcon.className = 'text-indigo-650 font-black text-2xl font-sans';
-                  fallbackIcon.innerText = 'B';
-                  pNode.appendChild(fallbackIcon);
-                }
-              }}
+              onError={(e) => { ... }}
             />
           </div>
           <div>
