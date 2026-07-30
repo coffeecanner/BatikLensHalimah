@@ -840,7 +840,9 @@ export default function App() {
               src={logoBatik} 
               alt="BatikLens Logo" 
               className="w-full h-full object-contain" 
-              onError={(e) => { ... }}
+              onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
             />
           </div>
           <div>
