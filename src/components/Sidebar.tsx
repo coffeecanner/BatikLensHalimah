@@ -16,7 +16,7 @@ import {
   ContactRound
 } from "lucide-react";
 import { User } from "../types";
-
+import logoBatik from '../logo.png';
 interface SidebarProps {
   currentMenu: string;
   setCurrentMenu: (menu: string) => void;
@@ -67,20 +67,12 @@ export default function Sidebar({ currentMenu, setCurrentMenu, user, onLogout, i
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-center text-indigo-600 font-bold text-lg font-display overflow-hidden shrink-0">
                 <img 
-                  src="/src/logo.png" 
-                  alt="Logo" 
-                  className="w-full h-full object-cover" 
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const pNode = e.currentTarget.parentNode as HTMLElement;
-                    if (pNode) {
-                      const fallbackSpan = document.createElement('span');
-                      fallbackSpan.className = 'text-indigo-650 font-black text-xl font-display';
-                      fallbackSpan.innerText = 'B';
-                      pNode.appendChild(fallbackSpan);
-                    }
-                  }}
+                  src={logoBatik} 
+                  alt="BatikLens Logo" 
+                  className="w-full h-full object-contain" 
+                  onError={(e) => { ... }}
                 />
+
               </div>
               <div>
                 <h1 className="text-base font-extrabold tracking-wider text-slate-900 uppercase font-display">BatikLens</h1>
