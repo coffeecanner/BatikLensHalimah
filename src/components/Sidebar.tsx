@@ -70,9 +70,10 @@ export default function Sidebar({ currentMenu, setCurrentMenu, user, onLogout, i
                   src={logoBatik} 
                   alt="BatikLens Logo" 
                   className="w-full h-full object-contain" 
-                  onError={(e) => { ... }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
-
               </div>
               <div>
                 <h1 className="text-base font-extrabold tracking-wider text-slate-900 uppercase font-display">BatikLens</h1>
