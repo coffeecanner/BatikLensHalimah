@@ -7,7 +7,7 @@
       "destination": "https://batiklenshalimah.my.id/api/:path*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|.*\\..+).*)",
       "destination": "/index.html"
     }
   ]
