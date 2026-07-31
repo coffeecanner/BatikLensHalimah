@@ -2210,7 +2210,7 @@ export default function App() {
                     <span>Menghapus...</span>
                   </>
                 ) : (
-                  <span>Konfirmasi Hapus Cascade</span>
+                  <span>Konfirmasi Hapus Data</span>
                 )}
               </button>
             </div>
