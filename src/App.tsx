@@ -1219,7 +1219,7 @@ export default function App() {
                 </div>
                 <div className="shrink-0 w-full md:w-auto">
                   <button
-                    onClick={() => setCurrentMenu("Hasil Prediksi Motif Batik")}
+                    onClick={() => setCurrentMenu("Data Gambar Motif Batik")}
                     className="w-full md:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md cursor-pointer hover:shadow-indigo-150"
                   >
                     <Camera className="w-4 h-4 animate-pulse" />
