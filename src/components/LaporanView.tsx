@@ -111,13 +111,7 @@ export default function LaporanView({ hasilPrediksiList, dataMotifList, pegawaiL
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Ekspor CSV</span>
           </button>
-          <button 
-            onClick={() => window.print()}
-            className="p-2 px-4 bg-indigo-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-950/20 active:scale-95 transition-all font-sans cursor-pointer shadow-sm"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Cetak PDF</span>
-          </button>
+         
         </div>
       </div>
 
