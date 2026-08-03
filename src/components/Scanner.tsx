@@ -362,7 +362,7 @@ export default function Scanner({ user, onPredictionComplete, onScanLogged }: Sc
                   <div className="flex justify-between items-start mb-1">
                     <div>
                       <span className="text-[9px] uppercase tracking-widest text-slate-400 font-semibold">Prediction 2 (Sekunder)</span>
-                      <h4 className="text-xs font-bold text-slate-800 font-serif">{getCleanMotifName(successResult.prediksi_sekunder)}</h4>
+                      <h4 className="text-xs font-bold text-slate-800 font-serif">{getCleanMotifName(successResult.prediksi_sekunder || successResult.prediction_sekunder)}</h4>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400">Confidence</span>
