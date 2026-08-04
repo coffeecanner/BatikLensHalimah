@@ -38,7 +38,7 @@ export default function Sidebar({ currentMenu, setCurrentMenu, user, onLogout, i
     { name: "Feature Map CNN", id: "Feature Map CNN", icon: Grid, roles: ["ADMIN", "STAFF"] },
     { name: "Attention Map VIT", id: "Attention Map VIT", icon: Eye, roles: ["ADMIN", "STAFF"] },
     { name: "Hasil Prediksi Motif Batik", id: "Hasil Prediksi Motif Batik", icon: Cpu, roles: ["ADMIN", "STAFF", "CUSTOMER"] },
-    { name: "Data Motif Batik Kaggle", id: "Data Motif Batik Kaggle", icon: Compass, roles: ["ADMIN", "STAFF"] },
+    { name: "Data Motif Batik Kaggle", id: "Data Motif Batik Kaggle", icon: Compass, roles: ["ADMIN", "STAFF", "CUSTOMER"] },
     { name: "Laporan", id: "Laporan", icon: BarChart3, roles: ["ADMIN", "STAFF"] },
   ];
 
