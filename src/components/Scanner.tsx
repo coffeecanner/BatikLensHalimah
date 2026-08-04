@@ -180,9 +180,7 @@ export default function Scanner({ user, onPredictionComplete, onScanLogged }: Sc
           <p className="text-xs text-slate-500">Unggah foto motif batik untuk mendeteksi filosofinya otomatis.</p>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="p-1 px-2.5 bg-indigo-50 rounded-lg border border-indigo-100 text-[10px] text-indigo-700 font-mono tracking-wider font-semibold">
-            READY: LeViT_224_NORM
-          </span>
+          
         </div>
       </div>
 
