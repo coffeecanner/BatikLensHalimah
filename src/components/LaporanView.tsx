@@ -99,7 +99,7 @@ export default function LaporanView({ hasilPrediksiList, dataMotifList, pegawaiL
             onChange={e => setFilterMonth(e.target.value)}
             className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer transition-colors hover:border-slate-350"
           >
-            <option value="ALL">Semua Waktu</option>
+            <option value="ALL">2026-08</option>
             {uniqueMonths.map(m => (
               <option key={m} value={m}>{m}</option>
             ))}
