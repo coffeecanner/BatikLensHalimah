@@ -40,6 +40,7 @@ export default function Sidebar({ currentMenu, setCurrentMenu, user, onLogout, i
     { name: "Hasil Prediksi Motif Batik", id: "Hasil Prediksi Motif Batik", icon: Cpu, roles: ["ADMIN", "STAFF", "CUSTOMER"] },
     { name: "Data Motif Batik Kaggle", id: "Data Motif Batik Kaggle", icon: Compass, roles: ["ADMIN", "STAFF", "CUSTOMER"] },
     { name: "Laporan", id: "Laporan", icon: BarChart3, roles: ["ADMIN", "STAFF"] },
+    { name: "test skripsi", id: "Laporan", icon: BarChart3, roles: ["ADMIN", "STAFF"] },
   ];
 
   const menuItems = allMenuItems.filter(item => !item.roles || item.roles.includes(user?.role || ""));
